@@ -1,0 +1,17 @@
+function [evo_gen, best_indiv, max_fitness] = selection(old_gen, fitness)
+popsize = length(fitness);
+[max_fitness, index1] = max(fitness);
+[min_fitness, index2] = min(fitness);
+best_indiv = old_gen(index1,:);
+index = [1:popsize];
+index(index1) = 0;
+index(index2) = 0;
+index = nonzeros(index);
+evo_gen = old_gen(index,:);
+evo_fitness = fitness(index);
+evo_popsize = popsize-2;
+ps = evo_fitness/sum(evo_fitness);
+pscum = cumsum(ps);
+r = rand(1, evo_popsize);
+selected = sum(pscum'*ones(1, evo_popsize) < ones(evo_popsize, 1)*r)+1;
+evo_gen = evo_gen(selected,:);

@@ -1,0 +1,5 @@
+% First Fit Ëã·¨
+function [x_Deploy] = FirstFitAlgorithm(PhyPara, LogicPara)
+VNF_pool = 1:LogicPara.Nf;
+Node_pool = 
+for 
