@@ -1,5 +1,5 @@
 %% Placement algorithm of ROSE algorithm packet
-% clear all
+clear all
 clc
 close all
 
@@ -54,12 +54,13 @@ if not(exist('Vector_x_Deploy','var'))
     %     toc
 end
 
-alpha = 0:0.2:1;
-% alpha = 1;
-tic
+alpha = [0, 0.35, 0.65, 1];
+
+
 x_Deploy = Decode_Deploy_Matrix(Vector_x_Deploy, PhyPara.Ns*2);
-toc
+
 for Index = 1:length(alpha)
+    t1 = clock;
     LogicPara.alpha = alpha(Index);
     %% 算法1：计算最优矩阵（最优结果）
     CompTimeThreshold = 10^5;
@@ -128,75 +129,90 @@ for Index = 1:length(alpha)
     Opt_ComptTime(Index) = CompTimeThreshold;
     Opt_TransTime(Index) = TranspTimeThreshold;
     Opt_TotalTime(Index) = TotalTimeThreshold;
-    toc
+    t2 = clock;
+    Opt_ExcutionTime(1,Index) = etime(t2,t1);
 end
 clear Vector_x
 
+TotalTime = zeros(5,length(alpha));
 %% 算法2：启发式算法针对目标1_最小化计算时延
 for Index = 1:length(alpha)
+    t1 = clock;
     LogicPara.alpha = alpha(Index);
     [x_Deploy_Algorithm1] = Min_Compt_Delay_Heuristic(PhyPara, LogicPara);
     Total_Comp_Time_Algorithm1 = sum(sum(x_Deploy_Algorithm1.*...
         [LogicPara.CompTime_vCPU,LogicPara.CompTime_FPGA]));
     
     x_tmp = x_Deploy_Algorithm1(:,1:PhyPara.Ns)+x_Deploy_Algorithm1(:,PhyPara.Ns+1:end);
-    TotalTime1(Index) = (1-LogicPara.alpha)*Total_Comp_Time_Algorithm1 ...
+    TotalTime(1,Index) = (1-LogicPara.alpha)*Total_Comp_Time_Algorithm1 ...
         + LogicPara.alpha*(trace(LogicPara.FlowNum*(x_tmp)...
         *ShortestDistMatrix*(x_tmp)')...
         +x_tmp(1,:)*ShortestDistMatrix(:,1)...
         +x_tmp(end,:)*ShortestDistMatrix(:,end));
+    t2 = clock;
+    ExcutionTime(1,Index) = etime(t2,t1);
 end
 
 %% 算法3：启发式算法针对目标2_最小化传输时延
 for Index = 1:length(alpha)
+    t1 = clock;
     LogicPara.alpha = alpha(Index);
     [x_Deploy_Algorithm2] = Min_Transport_Delay_Heuristic(PhyPara, LogicPara,ShortestDistMatrix);
     Total_Comp_Time_Algorithm2 = sum(sum(x_Deploy_Algorithm2.*...
         [LogicPara.CompTime_vCPU,LogicPara.CompTime_FPGA]));
     
     x_tmp = x_Deploy_Algorithm2(:,1:PhyPara.Ns)+x_Deploy_Algorithm2(:,PhyPara.Ns+1:end);
-    TotalTime2(Index) = (1-LogicPara.alpha)*Total_Comp_Time_Algorithm2 ...
+    TotalTime(2,Index) = (1-LogicPara.alpha)*Total_Comp_Time_Algorithm2 ...
         + LogicPara.alpha*(trace(LogicPara.FlowNum*(x_tmp)...
         *ShortestDistMatrix*(x_tmp)')...
         +x_tmp(1,:)*ShortestDistMatrix(:,1)...
         +x_tmp(end,:)*ShortestDistMatrix(:,end));
+    t2 = clock;
+    ExcutionTime(2,Index) = etime(t2,t1);
 end
 
 
 %% 算法4：遗传算法解决目标1+目标2问题
-tic
 for Index = 1:length(alpha)
+    t1 = clock;
     LogicPara.alpha = alpha(Index);
     [x_Deploy_Algorithm3] = Genetic_Algorithm(PhyPara, LogicPara);
     Total_Comp_Time_Algorithm3 = sum(sum(x_Deploy_Algorithm3.*...
         [LogicPara.CompTime_vCPU,LogicPara.CompTime_FPGA]));
     
     x_tmp = x_Deploy_Algorithm3(:,1:PhyPara.Ns)+x_Deploy_Algorithm3(:,PhyPara.Ns+1:end);
-    TotalTime3(Index) = (1-LogicPara.alpha)*Total_Comp_Time_Algorithm3 ...
+    TotalTime(3,Index) = (1-LogicPara.alpha)*Total_Comp_Time_Algorithm3 ...
         + LogicPara.alpha*(trace(LogicPara.FlowNum*(x_tmp)...
         *ShortestDistMatrix*(x_tmp)')...
         +x_tmp(1,:)*ShortestDistMatrix(:,1)...
         +x_tmp(end,:)*ShortestDistMatrix(:,end));
+    t2 = clock;
+    ExcutionTime(3,Index) = etime(t2,t1);
 end
-toc
+
 
 
 %% 算法5： First Fit 算法，解决目标1+目标2问题
 for Index = 1:length(alpha)
+    t1 = clock;
     LogicPara.alpha = alpha(Index);
     [x_Deploy_Algorithm4] = FirstFitAlgorithm(PhyPara, LogicPara);
     Total_Comp_Time_Algorithm4 = sum(sum(x_Deploy_Algorithm4.*...
         [LogicPara.CompTime_vCPU,LogicPara.CompTime_FPGA]));
     
     x_tmp = x_Deploy_Algorithm4(:,1:PhyPara.Ns)+x_Deploy_Algorithm4(:,PhyPara.Ns+1:end);
-    TotalTime4(Index) = (1-LogicPara.alpha)*Total_Comp_Time_Algorithm4 ...
+    TotalTime(4,Index) = (1-LogicPara.alpha)*Total_Comp_Time_Algorithm4 ...
         + LogicPara.alpha*(trace(LogicPara.FlowNum*(x_tmp)...
         *ShortestDistMatrix*(x_tmp)')...
         +x_tmp(1,:)*ShortestDistMatrix(:,1)...
         +x_tmp(end,:)*ShortestDistMatrix(:,end));
+    t2 = clock;
+    ExcutionTime(4,Index) = etime(t2,t1);
 end
 
 %% 算法6： 启发式算法，解决目标3问题
-TotalTime5 = min(TotalTime1,TotalTime2);
-eval('save ./DataContainer/FinalData.mat Opt_TotalTime TotalTime1 TotalTime2 TotalTime3 TotalTime4 TotalTime5')
+TotalTime(5,:) = min(TotalTime(1,:),TotalTime(2,:));
+ExcutionTime(5,:) = ExcutionTime(1,:) + ExcutionTime(2,:);
+eval(['save ./DataContainer/FinalData.mat alpha' ,...
+    ' Opt_TotalTime TotalTime Opt_ExcutionTime ExcutionTime'])
 
