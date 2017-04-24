@@ -1,0 +1,7 @@
+%% Figure Plot
+clc
+close all
+eval('load .\DataContainer\FinalData.mat')
+tic
+    x_Deploy = Decode_Deploy_Matrix(Vector_x_Deploy, PhyPara.Ns*2);
+    toc

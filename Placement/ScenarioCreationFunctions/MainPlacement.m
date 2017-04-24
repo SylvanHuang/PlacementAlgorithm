@@ -27,7 +27,7 @@ eval('load .\DataContainer\NodeTopology.mat');
 %     NodeInd = RelationVector(i,:);
 %     NodesLineLoc = [NodeLocation(NodeInd(1),:); NodeLocation(NodeInd(2),:)];
 %     plot(NodesLineLoc(:,1), NodesLineLoc(:,2), 'b-');
-%     
+%
 % end
 % axis([0,100,0,100]);
 % hold off
@@ -44,28 +44,27 @@ eval('load .\DataContainer\NodeTopology.mat');
 if not(exist('Vector_x_Deploy','var'))
     % 如果内存中没有该数据，从硬盘中提取
     if not(exist('.\DataContainer\PossibleAction.mat','file'))% Physical node number
-        Possible_Ans_Gen(PhyPara, LogicPara); 
+        Possible_Ans_Gen(PhyPara, LogicPara);
     end
     eval('load .\DataContainer\PossibleAction.mat'); % Import substrate topology figures
-%     tic
-%     x_Deploy(:,:,1:length(x_Deploy_a)) = x_Deploy_a;
-%     x_Deploy(:,:,length(x_Deploy_a)+(1:length(x_Deploy_b))) = x_Deploy_b;
-%     x_Deploy(:,:,length(x_Deploy_b)+(1:length(x_Deploy_c))) = x_Deploy_c;
-%     toc
+    %     tic
+    %     x_Deploy(:,:,1:length(x_Deploy_a)) = x_Deploy_a;
+    %     x_Deploy(:,:,length(x_Deploy_a)+(1:length(x_Deploy_b))) = x_Deploy_b;
+    %     x_Deploy(:,:,length(x_Deploy_b)+(1:length(x_Deploy_c))) = x_Deploy_c;
+    %     toc
 end
 
-% alpha = 0:0.2:1;
-alpha = 1;
+alpha = 0:0.2:1;
+% alpha = 1;
+tic
+x_Deploy = Decode_Deploy_Matrix(Vector_x_Deploy, PhyPara.Ns*2);
+toc
 for Index = 1:length(alpha)
     LogicPara.alpha = alpha(Index);
     %% 算法1：计算最优矩阵（最优结果）
     CompTimeThreshold = 10^5;
     TranspTimeThreshold = 10^5;
     TotalTimeThreshold = 10^5;
-    
-    tic
-    x_Deploy = Decode_Deploy_Matrix(Vector_x_Deploy, PhyPara.Ns*2);
-    toc
     Indicator = 1;
     if isempty(x_Deploy) == 1
         error('无可行解')
@@ -130,9 +129,12 @@ for Index = 1:length(alpha)
     Opt_TransTime(Index) = TranspTimeThreshold;
     Opt_TotalTime(Index) = TotalTimeThreshold;
     toc
-    
-    
-    %% 算法2：启发式算法针对目标1_最小化计算时延
+end
+clear Vector_x
+
+%% 算法2：启发式算法针对目标1_最小化计算时延
+for Index = 1:length(alpha)
+    LogicPara.alpha = alpha(Index);
     [x_Deploy_Algorithm1] = Min_Compt_Delay_Heuristic(PhyPara, LogicPara);
     Total_Comp_Time_Algorithm1 = sum(sum(x_Deploy_Algorithm1.*...
         [LogicPara.CompTime_vCPU,LogicPara.CompTime_FPGA]));
@@ -143,9 +145,11 @@ for Index = 1:length(alpha)
         *ShortestDistMatrix*(x_tmp)')...
         +x_tmp(1,:)*ShortestDistMatrix(:,1)...
         +x_tmp(end,:)*ShortestDistMatrix(:,end));
-  
-    
-    %% 算法3：启发式算法针对目标2_最小化传输时延 
+end
+
+%% 算法3：启发式算法针对目标2_最小化传输时延
+for Index = 1:length(alpha)
+    LogicPara.alpha = alpha(Index);
     [x_Deploy_Algorithm2] = Min_Transport_Delay_Heuristic(PhyPara, LogicPara,ShortestDistMatrix);
     Total_Comp_Time_Algorithm2 = sum(sum(x_Deploy_Algorithm2.*...
         [LogicPara.CompTime_vCPU,LogicPara.CompTime_FPGA]));
@@ -158,8 +162,9 @@ for Index = 1:length(alpha)
         +x_tmp(end,:)*ShortestDistMatrix(:,end));
 end
 
-% 
+
 %% 算法4：遗传算法解决目标1+目标2问题
+tic
 for Index = 1:length(alpha)
     LogicPara.alpha = alpha(Index);
     [x_Deploy_Algorithm3] = Genetic_Algorithm(PhyPara, LogicPara);
@@ -173,18 +178,25 @@ for Index = 1:length(alpha)
         +x_tmp(1,:)*ShortestDistMatrix(:,1)...
         +x_tmp(end,:)*ShortestDistMatrix(:,end));
 end
+toc
+
 
 %% 算法5： First Fit 算法，解决目标1+目标2问题
 for Index = 1:length(alpha)
     LogicPara.alpha = alpha(Index);
-    [x_Deploy_Algorithm4] = Genetic_Algorithm(PhyPara, LogicPara);
-    Total_Comp_Time_Algorithm3 = sum(sum(x_Deploy_Algorithm3.*...
+    [x_Deploy_Algorithm4] = FirstFitAlgorithm(PhyPara, LogicPara);
+    Total_Comp_Time_Algorithm4 = sum(sum(x_Deploy_Algorithm4.*...
         [LogicPara.CompTime_vCPU,LogicPara.CompTime_FPGA]));
     
-    x_tmp = x_Deploy_Algorithm3(:,1:PhyPara.Ns)+x_Deploy_Algorithm3(:,PhyPara.Ns+1:end);
-    TotalTime4(Index) = (1-LogicPara.alpha)*Total_Comp_Time_Algorithm3 ...
+    x_tmp = x_Deploy_Algorithm4(:,1:PhyPara.Ns)+x_Deploy_Algorithm4(:,PhyPara.Ns+1:end);
+    TotalTime4(Index) = (1-LogicPara.alpha)*Total_Comp_Time_Algorithm4 ...
         + LogicPara.alpha*(trace(LogicPara.FlowNum*(x_tmp)...
         *ShortestDistMatrix*(x_tmp)')...
         +x_tmp(1,:)*ShortestDistMatrix(:,1)...
         +x_tmp(end,:)*ShortestDistMatrix(:,end));
 end
+
+%% 算法6： 启发式算法，解决目标3问题
+TotalTime5 = min(TotalTime1,TotalTime2);
+eval('save ./DataContainer/FinalData.mat Opt_TotalTime TotalTime1 TotalTime2 TotalTime3 TotalTime4 TotalTime5')
+

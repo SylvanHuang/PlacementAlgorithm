@@ -1,12 +1,12 @@
 %% 遗传算法主函数
 function [x_Deploy_Algorithm3] = Genetic_Algorithm(PhyPara, LogicPara)
 %%%%%%%%%%%%%%%%%%%%%%%%%%%% 调试用 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-% tic
+
 % clc
 % clear all
 % eval('load .\DataContainer\InputPara.mat');
 
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%% 
 popsize = 1000;           % 种群数量
 ratio_poss_solution = 0.3; % 保证可行解数量
 max_ite_num = 50;       % 最大迭代次数
@@ -62,4 +62,3 @@ for i = 1:LogicPara.Nf
     index = bin2dec(num2str(Best_bin((i-1)*bits_num+1:i*bits_num)));
     x_Deploy_Algorithm3(i,index) = 1;
 end
-toc
