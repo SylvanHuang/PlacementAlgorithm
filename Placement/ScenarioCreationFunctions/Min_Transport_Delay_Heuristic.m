@@ -40,9 +40,9 @@ end
 NodeSumCapacity = PhyPara.vCPUNumMax + PhyPara.FPGA_Num; % 节点内异构资源总和
 % 根据流访问顺序，从先往后排序VNF
 VNFSequency = unique(LogicPara.FlowSequency,'stable');
-NodeSequency
-TraversDistance
-LogicPara.FlowNum
+% NodeSequency
+% TraversDistance
+% LogicPara.FlowNum
 
 %% 算法思想和判断原则
 % 1. 优先选出VNF之间流量较大的节点，将其合并后放置至选定的节点
